@@ -1,4 +1,4 @@
-library(ggplot2)
+library(shinydashboard)
 
 ui <- dashboardPage(
   dashboardHeader(title = "Basic dashboard"),
