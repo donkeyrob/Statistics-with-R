@@ -1,40 +1,20 @@
-library(shiny)
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(plyr)
-library(shinydashboard)
 
-#read in the data
-data <- read_csv("UCI_Credit_Card.csv")
-#manipulate data
-data$SEX <- mapvalues(data$SEX, from = c(1,2), to = c("male","female"))
-data$EDUCATION <- mapvalues(data$EDUCATION, from=c(1,2,3,4,5,6,0), 
-                  to=c("graduate school", "university", "high school", "others", "unknown", "unknown","unknown"))
-data$MARRIAGE <- mapvalues(data$MARRIAGE, from=c(1,2,3,0), to=c("married","single","others","others"))
-#converting to factor
-data$SEX <-factor(data$SEX)
-data$EDUCATION <- factor(data$EDUCATION)
-data$MARRIAGE <- factor(data$MARRIAGE)
-data$AGEf <- factor(data$AGE)
-data$default.payment.next.month<-factor(data$default.payment.next.month)
-#add a column age bucket
-data$AGE.bucket<-cut(data$AGE,c(10,20,30,40,50,60,70))
+source("Read_data.R")
 
 
 server <- function(input, output,session){
 
-  getData <- reactive({
-    newData <- data %>% filter(EDUCATION == input$education)
+  getdata <- reactive({
+    newdata <- data %>% filter(EDUCATION == input$education)
   })
-  getData2 <- reactive({
-    newData <- data %>% filter(EDUCATION == input$education2)
+  getdata2 <- reactive({
+    newdata <- data %>% filter(EDUCATION == input$education2)
   })
-  getData_marriage <- reactive({
-    newData <- data %>% filter(MARRIAGE == input$marriage)
+  getdata_marriage <- reactive({
+    newdata <- data %>% filter(MARRIAGE == input$marriage)
   })
   makeplot <- reactive({
-    newdata <- getData()
+    newdata <- getdata()
     # Balance limits by gender and education
     d1 <- ggplot(data, aes(factor(SEX), (LIMIT_BAL/1000),fill = EDUCATION)) + 
       geom_boxplot() + xlab("Gender") + ylab("BLimit(x1000 NT$)") + 
@@ -57,7 +37,7 @@ server <- function(input, output,session){
     
   })
   makeplot2 <- reactive({
-    newdata <- getData_marriage()
+    newdata <- getdata_marriage()
     # Balance limits by education and gender
     d3 <- ggplot(data, aes(factor(SEX), (LIMIT_BAL/1000), fill=MARRIAGE)) + 
       geom_boxplot() + xlab("Gender") + ylab("Balance Limit ( x 1000 NT$)") + 
@@ -123,7 +103,7 @@ server <- function(input, output,session){
   })
   
   makeplot21 <- reactive({
-    newdata <- getData2()
+    newdata <- getdata2()
     d1 <- ggplot(newdata, aes(x=default.payment.next.month)) + 
       geom_histogram(stat="count",color='red',fill='orange') +
       xlab("Default Payment Status") + ylab("Customer Count") 

@@ -1,4 +1,5 @@
 library(shinydashboard)
+source("Read_data.R")
 
 ui <- dashboardPage(
   dashboardHeader(title = "Basic dashboard"),
@@ -6,7 +7,7 @@ ui <- dashboardPage(
     menuItem("About", tabName = "About", icon = icon("archive")),
     menuItem("Balance", tabName = "Balance",icon = icon("laptop")),
     menuItem("Default", tabName = "Default",icon = icon("laptop")),
-    menuItem("Data", tabName = "Data",icon = icon("table"))
+    menuItem("data", tabName = "data",icon = icon("table"))
   )),
   
   #define the body of the app
@@ -17,7 +18,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        #Description of app
-                       h1("Dataset Information"),
+                       h1("dataset Information"),
                        box(background = "blue", width = 12,
                            h4("This dataset contains information on default payments,
                               demographic factors, credit data, history of payment, 
@@ -77,7 +78,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(3,
                          uiOutput("title1"),
-                         selectizeInput("education", "Education level:", choices = levels(data$EDUCATION)),
+                         selectizeInput("education", "Education level:", selected = "graduate school",choices = levels(data$EDUCATION)),
                          downloadButton("downloadplot","Download Plot"),
                          br(),
                          selectizeInput("marriage", "Marital Status:", choices = levels(data$MARRIAGE)),
@@ -129,7 +130,7 @@ ui <- dashboardPage(
                )#endo of fluid Row
         ), #end of tabitem 3
      
-      tabItem(tabName = "Data",
+      tabItem(tabName = "data",
               fluidRow(
                 h1("First 100 observations of the data"),
                 downloadLink("downloaddata","Click here to download the entire dataset"),
