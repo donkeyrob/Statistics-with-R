@@ -191,8 +191,53 @@ server <- function(input, output,session){
     data[1:100,]
   })
   
+  ## Regression 
+  logi_rslt <- reactive({
+    if(input$metrics == "Accuracy"){
+      if(input$subset == "Full model"){acc.log}else{acc.log_sub}
+      }else{if(input$subset == "Full model"){rcl.log}else{rcl.log_sub}}
+  })
   
+  rm_rslt <- reactive({
+    fit.rm <- randomForest(default ~., data = data.train, mtry = sqrt(ncol(data.train)),
+                           ntree = input$ntrees, importance = T)
+    #prediction
+    pred <- predict(fit.rm,newdata = data.test)
+    #calculate accuracy.
+    tbl.rm<-table(pred,data.test$default)
+    tbl.rm
+    acc.rm<-sum(diag(tbl.rm)/sum(tbl.rm))
+    #Recall
+    rcl.rm<-tbl.rm[4]/(tbl.rm[4]+tbl.rm[3])
+    
+    if(input$metrics == "Accuracy"){
+      acc.rm
+    }else{
+      rcl.rm
+    }
+  })
   
+
+  output$logistic <- renderText({
+    paste0("The ", input$metrics, " for Logistic regression model fitted with ", input$subset, " is: ", logi_rslt())
+  })
+  
+  output$random_forest <- renderText({
+    paste0("The ", input$metrics, " for Random forest model with ", input$ntrees, " number of trees is: ", rm_rslt())
+  })
+  
+  km <- reactive({
+    km <- kmeans(data3,input$nclust, nstart = 20)
+    km$cluster
+  })
+  
+  output$plot_unsv <- renderPlot({
+    clusters <-as.factor(km())
+    x <- input$xaxis
+    y <- input$yaxis
+    ggplot(data3, aes_string(x,y,col = clusters))+geom_point()
+    
+  })
 
 
 

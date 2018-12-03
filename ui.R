@@ -2,12 +2,14 @@ library(shinydashboard)
 source("Read_data.R")
 
 ui <- dashboardPage(
-  dashboardHeader(title = "Basic dashboard"),
+  dashboardHeader(title = "Credit Card Default Analysis"),
   dashboardSidebar(sidebarMenu(
     menuItem("About", tabName = "About", icon = icon("archive")),
     menuItem("Balance", tabName = "Balance",icon = icon("laptop")),
     menuItem("Default", tabName = "Default",icon = icon("laptop")),
-    menuItem("data", tabName = "data",icon = icon("table"))
+    menuItem("Data", tabName = "data",icon = icon("table")),
+    menuItem("Supervised Model", tabName = "spvmodel",icon = icon("gear")),
+    menuItem("Unsupervised Model", tabName = "unsvmodel",icon = icon("gear"))
   )),
   
   #define the body of the app
@@ -127,15 +129,54 @@ ui <- dashboardPage(
                          plotOutput("plot22", height = 500)
                        )#end of fluidrow
                 )#end of column
-               )#endo of fluid Row
+               )#end of fluid Row
         ), #end of tabitem 3
-     
+      #tab item 4
       tabItem(tabName = "data",
               fluidRow(
                 h1("First 100 observations of the data"),
                 downloadLink("downloaddata","Click here to download the entire dataset"),
                 tableOutput("table")
-              ))
+                )#end of fluidrow
+              ),#end of tabitem data
+      #tab item supervised model
+      tabItem(tabName = "spvmodel",
+              fluidRow(
+                column(3,
+                       selectizeInput("subset","Variable Selection:", choices = c("Full model","Subset model")
+                                      ,selected = "Full model"),
+                       sliderInput("ntrees", "Number of Trees:", min = 10, max = 200, value = 10, step = 10),
+                       br(),
+                       selectizeInput("metrics","Evaluation Metrics:", choices = c("Accuracy", "Recall"),
+                                      selected = "Accuracy")
+                ),# end of column
+                column(9,
+                       fluidRow(
+                         textOutput("logistic"),
+                         br(),
+                         #Add another format of result
+                         textOutput("random_forest")
+                       )#end of fluidrow
+                )#end of column
+              )#end of larger fluidrow
+      ),#end of tabitem 4
+      #tabItem 5
+      tabItem(tabName = "unsvmodel",
+              fluidRow(
+                column(3,
+                       numericInput("nclust","Number of Clusters:", value = 2, min=2,max = 5,step =1),
+                       br(),
+                       selectizeInput("xaxis", "X axis", choices = colnames(data3),selected = "AGE"),
+                       selectizeInput("yaxis", "Y axis", choices = colnames(data3),selected = "LIMIT_BAL")
+                       ),#end of column
+                column(9,
+                      fluidRow(
+                        plotOutput("plot_unsv")
+                      )#end of son fluidrow
+                    )#end of column 9
+                )#end of parent fluid row 
+              )#end of tabItem 5
+      
     )#ent of all tabitems
   )#end of dashboard body
   
