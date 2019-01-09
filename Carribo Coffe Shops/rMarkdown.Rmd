@@ -1,0 +1,420 @@
+---
+title: "ST 590 Project 1"
+author: "<b>Part I:</b> Sean Carey, Colleen Karnas-Haines, Yuxi Wang <br><b>Part II:</b> Josh Harmes, Xiang Lu"
+date: "September 26, 2018"
+output: 
+  html_document:
+    theme: cerulean
+    df_print: paged
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{ST 590 Project 1}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Part I
+## XML Data
+
+The type of data our group works on is XML data. XML is short for Extensible Markup Language, and the basic building block of an XML document is an element, defined by tags.
+
+XML data is a flexible way to create information formats and electronically share structured data via the public Internet, as well as via corporate networks.
+
+## Reading XML Data
+
+Packages like `XML`, `xml2` and etc. can be used to import XML files. `xml2` has similar goals to the `XML` package. 
+
+We choose to use package `xml2`, since this package is tidyverse-adjacent. The advantages of `xml2` is (1) it  doesn't have the memory leaks, (2) it has a simple class hierarchy, and (3) it is more convenient handling of namespaces in Xpath expressions.
+
+```{r Load Relevant Packages}
+library(tidyverse)
+if (!require("xml2")){
+  install.packages("xml2") 
+  library("xml2")
+}
+if (!require("DT")){
+  install.packages("DT") 
+  library("DT")
+}
+```
+
+## Example Data Set:  
+
+### NCHS - Leading Causes of Death in the United States
+
+The example we used in this project is the **national leading causes of death data in United States**, provided by Centers for Disease Control and Prevention. This dataset presents the age-adjusted death rates for the 10 leading causes of death in the United States beginning in 1999. This data is available at http://www.data.gov. This data set showed the count of death and age-adjusted death rates (deaths per 100,000) for each specific cause at each state from 1999 to 2016.
+```{r Read Data}
+# Read in XML file
+x<-read_xml("https://data.cdc.gov/api/views/bi63-dtpu/rows.xml?accessType=DOWNLOAD") 
+# Get nodeset of all rows
+x.nodeset<-xml_children(xml_child(x)) 
+
+####
+#Unclear Comments: What are the contents included in the list of x? What is the meanning of nodeset? why we are using these functions on x?
+####
+
+# Use lapply() to retrieve all values: matrix to be combined as dataframe
+x.rows <- lapply(x.nodeset, function(z) matrix(unlist(as_list(z)), nrow=1, byrow=F))
+x.df<-data.frame(do.call("rbind", x.rows))
+
+# Set column names
+names(x.df)<- c("year","_113_cause_name","cause_name","state","deaths","aadr") 
+# Change data types
+x.df <- x.df %>% tbl_df() %>% mutate_at(4:6, as.character) %>% mutate_at(5:6, as.numeric) 
+x.df
+```
+
+#### Alternate Read Method
+
+While investigating the data, we found discrepensies with the source data and our read in dataframe. An alternative method of reading the file was investigated and applied with satisfactory results. The values in the dataframe now match the values in the source file. We came to find out that the issue was not in reading in the data, it was the conversion to numeric. If your variable is read in as a factor, you cannot go straight to numeric, you must go to character then numeric in order to retain the correct values.
+
+```{r Alternate Read Method}
+if (!require("XML")){
+  install.packages("XML") 
+  library("XML")
+}
+if (!require("RCurl")){
+  install.packages("RCurl") 
+  library("RCurl")
+}
+if (!require("plotly")){
+  install.packages("plotly") 
+  library("plotly")
+}
+
+fileURL <- "http://data.cdc.gov/api/views/bi63-dtpu/rows.xml?accessType=DOWNLOAD"
+xData <- getURL(fileURL)
+xml <- xmlParse(xData)
+df <- xmlToDataFrame(xml["//row/row"])
+df <- df %>% tbl_df %>% mutate_at(5:6,as.character) %>% mutate_at(5:6,as.numeric)
+df
+```
+
+With comparision, these two dataframes are equal.
+```{r Compare DFs}
+all.equal(x.df, df,convert = TRUE)
+```
+
+### Create New Variable(s)
+
+#### Proportion of Death by Cause
+
+```{r Proportion by Cause}
+# Create new variable showing the porportion for deaths of a certain cause at each year for a given state
+x.df %>% group_by(year,state) %>%
+  mutate(causeProportion = deaths/deaths[cause_name == "All causes"])
+```
+
+#### Percentage of Total Deaths  
+
+This looks at the percentage of cancer and suicide deaths in each state in the first recorded year (1999) versus the last recorded year (2016). It also looks at both cancer and suicide trends, as a percentage of total deaths.
+
+```{r Cancer & Suicide Variables}
+# Percentage of deaths from cancer by state in 1999 vs 2016
+cancerData <- df %>% 
+  filter ((year =="2016" | year=="1999") & (cause_name=="All causes" | cause_name =="Cancer") & state!="United States") %>%
+  select (state, year, cause_name, deaths) %>%  
+  spread(cause_name, deaths)
+cancerData <- cancerData %>% mutate(cancerPerc = Cancer/`All causes`)
+head(cancerData)
+
+# Percentage of deaths from suicide by state in 1999 vs 2016
+suicideData <- df %>% 
+  filter ((year =="2016" | year=="1999") & (cause_name == "All causes" | cause_name == "Suicide") & state!="United States") %>%
+  select (state, year, cause_name, deaths) %>%  
+  spread(cause_name, deaths)
+suicideData <- suicideData %>% mutate(suicidePerc = Suicide/`All causes`)
+head(suicideData)
+
+# All cancer data
+allCancerData <- df %>% 
+  filter ((cause_name=="All causes" | cause_name =="Cancer") & state != "United States") %>%
+  select (state, year, cause_name, deaths) %>%  
+  spread(cause_name, deaths)
+allCancerData <- allCancerData %>% 
+  mutate(cancerPerc = Cancer/`All causes` )
+head(allCancerData)
+
+# A view of both suicide and cancer trends
+can_sui_data <- df %>% 
+  filter ((cause_name == "All causes" | cause_name == "Suicide" | cause_name == "Cancer") & state != "United States") %>% 
+  select (state, year, cause_name, deaths) %>% 
+  spread(cause_name, deaths)
+can_sui_data <- can_sui_data %>% 
+  mutate(suicidePerc = Suicide/`All causes`) %>%
+  mutate(cancerPerc = Cancer/`All causes`)
+can_sui_data <- can_sui_data %>% 
+  group_by(year) %>% 
+  summarise(mean_sui_rate = mean(suicidePerc), mean_can_rate = mean(cancerPerc))
+can_sui_data <- can_sui_data %>% 
+  gather(key=rates,values = c(mean_sui_rate, mean_can_rate)) %>% 
+  group_by(year)
+head(can_sui_data)
+```
+
+### Tables and Numeric Summaries
+
+```{r Numeric Summaries}
+# Compare mean death rate of Washington and Alabama
+df %>% 
+  filter(state == "Alabama" | state == "Washington") %>%
+  group_by(year, state) %>% 
+  summarise(mean.death = mean(deaths)) %>% 
+  datatable() #creates searcable table
+
+# Compare mean death rate of Washington and Alabame, spread into long form
+df %>% 
+  filter(state == "Alabama" | state == "Washington") %>%
+  group_by(year, state) %>% 
+  summarise(mean.death = mean(deaths)) %>% 
+  spread(state, mean.death) %>%  #spreads data into long form
+  datatable() 
+
+# National Median Yearly Age-Adjusted Death Rate by Cause of Death 
+df %>% 
+   group_by(year, cause_name) %>% 
+   summarise(median.aadr = median(aadr)) %>% 
+   datatable()
+```
+
+### Plots
+
+```{r Plots}
+# Create grouped data frame for plot
+df.alabama.washington <- df %>% 
+  filter(state == "Alabama" | state == "Washington") %>%
+  group_by(year, state) %>% 
+  summarise(mean.death = mean(deaths)) 
+
+# Side by side bar plot
+ggplot(df.alabama.washington, aes(fill=state, x=year, y=mean.death)) + 
+  geom_bar(stat="identity", position = "dodge") +
+  labs(x="Year", y="Mean Death Rate", title="Mean Death Rate 1999-2016") +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0))
+
+# Side by side boxplot
+ggplot(df, aes(x=cause_name, y=aadr)) +
+  geom_boxplot(fill="red3") +
+  labs(x="",y="Age Adjusted Death Rate", title="Boxplot Age Adjusted Death Rate by Cause of Death") +
+  theme(axis.text.x=element_text(angle = 25,vjust = 1, hjust = 1))
+
+# Dataframe for scatter plot
+df.median.aadr <-  x.df %>% 
+   group_by(year, cause_name) %>% 
+   summarise(median.aadr = median(aadr)) 
+
+# Scatter plot with colors 
+ggplot(df.median.aadr, aes(x=year, y=median.aadr, color=cause_name)) +
+  geom_point() +
+  labs(x="Year", y=" Median Age Adjusted Death Rate", color = "Cause of Death") +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0))
+
+# Bar plot with "identity" positions shows how cancer, as a percentage of overall deaths, has gone down in each state
+ggplot(cancerData, aes(fill=year, x=state, y=cancerPerc)) + 
+  geom_bar(stat="identity", position = "identity", alpha=0.7) +
+  labs(x="State", y="Percentage of deaths by cancer", title="Cancer death rates 1999 v. 2016") +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0))
+
+# This bar chart shows how suicide rates have increased
+ggplot(suicideData, aes(fill=year, x=state, y=suicidePerc)) +
+  geom_bar(stat="identity", position = "identity", alpha=0.7) +
+  labs(x="State", y="Percentage of deaths by suicide", title="Suicide death rates 1999 v. 2016") +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0))
+
+# This compares the % of deaths due to cancer vs. % of deaths due to suicide over the years
+ggplot(can_sui_data, aes(fill=rates, x=year, y=value)) + 
+  geom_bar(stat="identity", position = "stack", alpha=0.7) +
+  labs(x="State", y="Percentage of deaths by cancer or suicide", title="Comparing Percentage of deaths due to Suicide and Cancer 1999-2016") +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0))
+
+# A scatter plot of all the states % of cancer deaths
+df.states.scatter <- ggplot(allCancerData, aes(x=year, y=cancerPerc, color=state)) + 
+  geom_point()+labs(x="Year", y="Percentage of deaths by cancer", title="Cancer death rates in US states 1999 through 2016") +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0))
+
+# Makes df.states.scatter plot interactive using the "plotly" library
+ggplotly(df.states.scatter)
+```
+
+# Part II
+
+```{r Logo, out.width= '400px', echo=FALSE}
+pic_url <- "http://www.signmanagers.com/wp-content/uploads/2017/01/caribou-coffee-01-830x415.jpg"
+include_graphics(pic_url)
+```
+
+
+## Caribou Coffee Data  
+
+### Read in XML Data  
+
+Here we read in the XML data set on Caribou Coffee locations and explicitly controlled the column types for later analysis:
+```{r Read in Caribou Data}
+# Read XML data into a data frame
+xml2 <- xmlParse(getURL("https://www4.stat.ncsu.edu/~post/558/datasets/ajax.xml"))
+
+# Convert only the data portion of the XML file to the data frame
+caribou <- xmlToDataFrame(xml2["//poi"], stringsAsFactors = FALSE)
+
+# Coerce the latitude/longitude variables into numeric type
+caribou[, 23:24] <- lapply(caribou[, 23:24], as.double)
+
+# Convert df to tibble
+caribou <- as_tibble(caribou)
+caribou
+```
+
+### Alternate Read Method
+This is an alternate way of reading in the data.  
+```{r Alternate Method} 
+# Use the RCurl package to directly read URL
+doc <- xmlParse(getURL("https://www4.stat.ncsu.edu/~post/558/datasets/ajax.xml"))
+# Transform to data frame then tibble
+xmldf <- xmlToDataFrame(nodes = getNodeSet(doc, "//poi")) 
+xmldf <- as_tibble(xmldf)
+xmldf
+```
+
+## Exploration of Data
+
+  This data on Caribou Coffee locations was scraped from the store locator portion of Caribou Coffee's website (<https://www4.stat.ncsu.edu/~post/558/datasets/ajax.xml>).  
+  <br>
+  This data set proved pretty difficult to really understand due to the large amount of missing data. The missing data is seen as an empty character string since the variables are almost all character (only latitude and longitude coordinates are numeric), and can easily be removed or replaced with a more clear missing value marker (`dplyr::na_if()` function should work). There were also discrepancies within variables in terms of the responses provided, as is seen in `grocery_count` object where the only two responses given were 'Y' and 'y' (absent were any negative responses like 'N' or 'n'). This makes it impossible to determine whether the observations where there was no input given were meant to be a negative response (e.g. 'No', 'N', 'n') or just missing, and so there wasn't much analysis we could perform without further information. Based on the fact that this was web-scraped data, I'd assume the values just weren't present on the website that was scraped and could be either affirmative ('Y') or negative ('N').  
+  <br>
+  Given the dearth of numeric variables, we wanted to make sure to utilize the two we had in order to create a figure with an interactive map of the Caribou locations throughout the country. There a few hundred locations outside the US that are located almost entirely in the Middle East (United Arab Emirates (AE), Bahrain (BH), Jordan (JO), Kuwait (KW), Lebanon (LB), Oman (OM), Qatar (QA), Turkey (TR)) with some in South Korea (KR) and South Africa (SA), as well.
+
+### Contingency Tables 
+
+```{r Contingency Tables}
+# Load package for styling of kable output
+require("kableExtra")
+require("dplyr")
+# Summary table for names of stores with more than 2 Caribou total (missing ("") removed)
+name_count <- caribou %>% 
+  group_by(name) %>% 
+  count() %>% 
+  filter(n > 2 & name != "") %>% 
+  arrange(desc(n)) %>% 
+  select(StoreName = name, Count = n)
+name_count %>% 
+  kable(caption = "Top Stores with a Caribou Coffee") %>% 
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for top 50 cities (missing removed)
+city_count <- caribou %>% 
+  group_by(city) %>% 
+  count() %>% 
+  filter(n > 14 & city != "") %>% 
+  arrange(desc(n)) %>% 
+  select(City = city, Count = n) 
+city_count %>%  
+  kable(caption = "Top 50 Cities by Number of Caribou Coffee Locations") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for states (missing removed)
+state_count <- caribou %>% 
+  group_by(state) %>%
+  count() %>% 
+  arrange(desc(n)) %>% 
+  filter(state != "") %>% 
+  select(State = state, Count = n) 
+state_count %>% 
+  kable(caption = "Number of Caribou Coffee Locations by State") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for coffeeshops  (missing values included)
+coffee_count <- caribou %>%
+  group_by(coffeeshop) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  select(CoffeshopPresent = coffeeshop, Count = n)
+coffee_count %>% 
+  kable(caption = "Number of Caribou Coffee Locations with Coffeeshop") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for grocery (missing values included)
+grocery_count <- caribou %>% 
+  group_by(grocery) %>%
+  count() %>% 
+  arrange(desc(n)) %>% 
+  select(Grocery = grocery, Count = n) 
+grocery_count %>%  
+  kable(caption = "Number of Caribou Coffee Locations in a Grocery Store") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for country 
+country_count <- caribou %>% 
+  group_by(country) %>%
+  count() %>% 
+  arrange(desc(n)) %>% 
+  select(Country = country, Count = n) 
+country_count %>% 
+  kable(caption = "Number of Caribou Coffee Locations by Country") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for loyalty programs (missing values included)
+loyalty_count <- caribou %>%
+  group_by(loyalty) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  select(LoyaltyProgram = loyalty, Count = n)
+loyalty_count %>% 
+  kable(caption = "Caribou Coffee Locations with Loyalty Program") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+
+# Summary table for wifi availability (note differently formatted responses as well as majority missing response)
+wifi_count <- caribou %>%
+  group_by(wifi) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  select(WifiAccess = wifi, Count = n)
+wifi_count %>% 
+  kable(caption = "Caribou Coffee Locations with Wifi Available") %>%
+  kable_styling(c("striped", "condensed", "hover"), full_width = FALSE)
+```
+### Distribution Map (US Locations)  
+
+The distribution of Caribou Coffee locations across the United States.
+
+```{r Map}
+library(ggplot2)
+library(ggmap)
+lat <- as.numeric(as.character(xmldf$latitude))
+lon <- as.numeric(as.character(xmldf$longitude))
+lonlat <- data.frame(lat,lon)
+### I can't use ggmap because it doesn't work on my version of R (3.3.1) and I can't update due to OS, which is why I have to comment it out to knit the html doc ###
+register_google(key = "AIzaSyAvRI8BfwHico4cHoTwFHppOzVVswujrHk")
+mapgilbert <- get_map(location = c(lon= -98, lat= 40), zoom= 4, maptype= "roadmap", scale= 2)
+ggmap(mapgilbert) +
+  geom_point(data= lonlat, aes(x= lon, y= lat, fill= "red", alpha= 0.8), size= 2, shape= 21) +           guides(fill= FALSE, alpha= FALSE, size= FALSE)
+
+```
+The map shows that the Caribou Coffee locations are most concentrated in the Eastern US, with remote but dense of the big cities in the Midwest and West. The 4 states that do not have *any* Caribou Coffee locations are: Arkansas (AR), Louisiana (LA), Maine (ME), and Mississippi (MS).
+
+### State Summary
+Here we created a bar plot representing the number of stores by US state.
+```{r state, fig.height=6}
+state_counts <-summary(xmldf$state)
+state_counts <- state_counts[2:47] #remove missing values.
+state_name <- c(names(state_counts)) #get state name
+state_df <- data.frame(state_name, state_counts) #make a dataframe
+state_df <- state_df[order(state_df$state_counts),] #sort
+state_df$state_name <- factor(state_df$state_name, levels = state_df$state_name)
+ggplot(state_df, aes(x= state_name, y= state_counts)) +
+  geom_bar(stat = "identity", width = 0.75, fill = "dodgerblue", show.legend = FALSE) +
+  labs(x = "State Code", y = "Count", title = "State Summary", subtitle = "Number of Coffee Shops by State") +
+  coord_flip() 
+```
+
+From this bar plot we can clearly see that Florida (FL) has the most coffee shops by far (883). Minnesota (MN), California (CA), Ohio (OH), and Illinois (IL) round out the top 5 in terms of number of Caribou Coffee locations. Oklahoma (OK), New Mexico (NM), Oregon (OR), Hawaii (HI), and Alaska (AK) have the least Caribou shops (not including the 4 states without any). 
+
+
