@@ -14,3 +14,23 @@ The distribution of Caribou Coffee locations across the United States.
 ![Image of ggmap](https://github.com/donkeyrob/Statistics-with-R/blob/master/Carribo%20Coffee%20Shops/Rplot.png)
 
 The map shows that the Caribou Coffee locations are most concentrated in the Eastern US, with remote but dense of the big cities in the Midwest and West. The 4 states that do not have any Caribou Coffee locations are: Arkansas (AR), Louisiana (LA), Maine (ME), and Mississippi (MS).
+
+### Summary by State
+
+Here we created a bar plot representing the number of stores by US state.
+
+![Image of state](https://github.com/donkeyrob/Statistics-with-R/blob/master/Carribo%20Coffee%20Shops/image2.png)
+
+From this bar plot we can clearly see that Florida (FL) has the most coffee shops by far (883). Minnesota (MN), California (CA), Ohio (OH), and Illinois (IL) round out the top 5 in terms of number of Caribou Coffee locations. Oklahoma (OK), New Mexico (NM), Oregon (OR), Hawaii (HI), and Alaska (AK) have the least Caribou shops (not including the 4 states without any).
+
+### Top Stores with Caribou Coffee
+The following table list out top stores that have Caribou Coffee.
+
+| StoreName     | Count      | 
+| ------------- |:----------:| 
+| Publix        |1054        | 
+| Target        | 917        |  
+| Safeway       | 743        | 
+| Stop & Shop   |399         | 
+| Kroger        | 317        |  
+
