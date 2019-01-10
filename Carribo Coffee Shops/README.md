@@ -8,4 +8,9 @@ Given the dearth of numeric variables, we wanted to make sure to utilize the two
 
 ## Exploration of data
 
-![Image of ggmap](https://github.com/donkeyrob/Statistics-with-R/blob/master/Carribo%20Coffe%20Shops/Rplot.png)
+### Distribution Map (US Locations)
+The distribution of Caribou Coffee locations across the United States.
+
+![Image of ggmap](https://github.com/donkeyrob/Statistics-with-R/blob/master/Carribo%20Coffee%20Shops/Rplot.png)
+
+The map shows that the Caribou Coffee locations are most concentrated in the Eastern US, with remote but dense of the big cities in the Midwest and West. The 4 states that do not have any Caribou Coffee locations are: Arkansas (AR), Louisiana (LA), Maine (ME), and Mississippi (MS).
