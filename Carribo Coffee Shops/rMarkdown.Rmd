@@ -1,6 +1,6 @@
 ---
-title: "ST 590 Project 1"
-author: "<b>Part I:</b> Sean Carey, Colleen Karnas-Haines, Yuxi Wang <br><b>Part II:</b> Josh Harmes, Xiang Lu"
+title: "Caribou Coffee Marketing Analysis"
+author: "<b>Part I:</b> Sean Carey, Colleen Karnas-Haines, Yuxi Wang <br><b>Part II:</b> Xiang Lu, Josh Harmes"
 date: "September 26, 2018"
 output: 
   html_document:
