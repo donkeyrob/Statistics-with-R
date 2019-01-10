@@ -8,4 +8,4 @@ Given the dearth of numeric variables, we wanted to make sure to utilize the two
 
 ## Exploration of data
 
-![Image of ggmap](https://github.com/donkeyrob/Statistics-with-R/blob/master/Carribo%20Coffe%20Shops/Rplot.png)
+![Image of ggmap](https://github.com/donkeyrob/Statistics-with-R/blob/master/Carribo%20Coffee%20Shops/Rplot.png)
