@@ -20,7 +20,7 @@ ui <- dashboardPage(
               fluidRow(
                 column(6,
                        #Description of app
-                       h1("dataset Information"),
+                       h1("Dataset Information"),
                        box(background = "blue", width = 12,
                            h4("This dataset contains information on default payments,
                               demographic factors, credit data, history of payment, 
